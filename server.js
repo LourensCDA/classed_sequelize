@@ -18,7 +18,7 @@ app.post('/users', async (req, res) => {
 
 app.get('/users', async (req, res) => {
   try {
-    const users = await User.findAll();
+    const users = await User.findAll({ include: ['posts'] });
     return res.json(users);
   } catch (err) {
     console.log(err);
@@ -29,7 +29,38 @@ app.get('/users', async (req, res) => {
 app.get('/users/:uuid', async (req, res) => {
   const uuid = req.params.uuid;
   try {
-    const user = await User.findOne({ where: { uuid } });
+    const user = await User.findOne({ where: { uuid }, include: ['posts'] });
+    return res.json(user);
+  } catch (err) {
+    console.log(err);
+    return res.status(500).json({ error: 'Something went wrong' });
+  }
+});
+
+app.delete('/users/:uuid', async (req, res) => {
+  const uuid = req.params.uuid;
+  try {
+    const user = await User.findOne({ where: { uuid }, include: ['posts'] });
+
+    await user.destroy();
+
+    return res.json({ msg: 'user deleted' });
+  } catch (err) {
+    console.log(err);
+    return res.status(500).json({ error: 'Something went wrong' });
+  }
+});
+
+app.put('/users/:uuid', async (req, res) => {
+  const uuid = req.params.uuid;
+  const { name, email, role } = req.body;
+
+  try {
+    const user = await User.findOne({ where: { uuid }, include: ['posts'] });
+    user.name = name;
+    user.email = email;
+    user.role = role;
+    await user.save();
     return res.json(user);
   } catch (err) {
     console.log(err);
@@ -38,11 +69,23 @@ app.get('/users/:uuid', async (req, res) => {
 });
 
 app.post('/posts', async (req, res) => {
-  const { useruuid, body } = req.body;
+  const { userUuid, body } = req.body;
   try {
     const user = await User.findOne({ where: { uuid: userUuid } });
     const post = await Post.create({ body, userId: user.id });
-    return res.json(psot);
+    return res.json(post);
+  } catch (err) {
+    console.log(err);
+    return res.status(500).json(err);
+  }
+});
+
+app.get('/posts', async (req, res) => {
+  try {
+    const posts = await Post.findAll({
+      include: ['user'],
+    });
+    return res.json(posts);
   } catch (err) {
     console.log(err);
     return res.status(500).json({ error: 'Something went wrong' });
